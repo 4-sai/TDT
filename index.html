@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Dumb Tales — RPG World</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#000;color:#e0e0e0;font-family:'VT323',monospace;overflow-x:hidden;cursor:none}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;background:repeating-linear-gradient(0deg,rgba(0,0,0,.08) 0px,rgba(0,0,0,.08) 1px,transparent 1px,transparent 3px)}
+#cursor{position:fixed;width:8px;height:8px;background:#fff;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);box-shadow:0 0 0 1px #000}
+
+/* ── HUD ── */
+#hud{position:fixed;top:0;left:0;right:0;z-index:8000;background:#0a0a0a;border-bottom:3px solid #333;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.hud-logo{font-family:'Press Start 2P',monospace;font-size:17px;color:#ffd700;text-shadow:2px 2px 0 #8b6914;text-decoration:none;white-space:nowrap}
+.hud-zone{font-family:'Press Start 2P',monospace;font-size:17px;color:#fff;letter-spacing:1px;white-space:nowrap}
+.hud-nav{display:flex;gap:4px;flex-wrap:wrap}
+.hud-nav a{font-family:'Press Start 2P',monospace;font-size:21px;color:#555;text-decoration:none;padding:5px 9px;border:1px solid #1a1a1a;transition:all .15s;white-space:nowrap}
+.hud-nav a:hover{color:#ffd700;border-color:#ffd700}
+
+/* ── ZONES ── */
+.zone{min-height:100vh;position:relative;overflow:hidden;padding:80px 0 200px}
+.tile-bg{position:absolute;inset:0;pointer-events:none;image-rendering:pixelated}
+.zone-content{position:relative;z-index:10;max-width:860px;margin:0 auto;padding:0 24px}
+
+/* ── SECTION HEADERS ── */
+.sec-header{text-align:center;padding:0 0 28px;display:flex;flex-direction:column;align-items:center;width:100%}
+.sec-badge{font-family:'Press Start 2P',monospace;font-size:17px;background:#000;border:2px solid currentColor;display:inline-block;padding:5px 12px;margin-bottom:12px;letter-spacing:2px}
+.sec-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,2.2vw,20px);color:#fff;line-height:1.7;text-align:center;width:100%}
+
+/* ── DIALOG BOX ── */
+.dialog{background:#000;border:3px solid #fff;padding:14px 18px;position:relative;font-size:17px;line-height:1.8;color:#ccc;margin:0 0 24px}
+.dialog::before{content:attr(data-npc);position:absolute;top:-13px;left:10px;background:#000;padding:0 8px;font-family:'Press Start 2P',monospace;font-size:17px}
+.dbc{display:inline-block;animation:dbc .7s step-end infinite}
+@keyframes dbc{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── HERO ── */
+.title-frame{border:3px solid #ffd700;background:rgba(0,0,0,.85);padding:20px 36px;display:inline-block;position:relative;margin-bottom:24px}
+.title-frame::before,.title-frame::after,.title-frame .c3,.title-frame .c4{content:'◆';position:absolute;color:#ffd700;font-size:17px}
+.title-frame::before{top:-10px;left:-10px}.title-frame::after{top:-10px;right:-10px}
+.title-frame .c3{bottom:-10px;left:-10px}.title-frame .c4{bottom:-10px;right:-10px}
+.game-title{font-family:'Press Start 2P',monospace;font-size:clamp(22px,4.5vw,40px);color:#ffd700;text-shadow:3px 3px 0 #5a4000;line-height:1.5;letter-spacing:2px}
+.game-sub{font-family:'VT323',monospace;font-size:21px;color:#aaa;letter-spacing:4px;margin-top:6px}
+
+/* ── BUTTONS ── */
+.btn{font-family:'Press Start 2P',monospace;font-size:21px;background:#000;border:2px solid currentColor;padding:10px 20px;text-decoration:none;display:inline-block;margin:8px 6px 0;transition:all .12s;white-space:nowrap}
+.btn::before{content:'▶ ';animation:dbc .8s step-end infinite}
+.btn:hover{transform:translate(-2px,-2px)}
+.btn-c{color:#00f5e4}.btn-c:hover{box-shadow:4px 4px 0 #00f5e4;background:rgba(0,245,228,.1)}
+.btn-g{color:#ffd700}.btn-g:hover{box-shadow:4px 4px 0 #ffd700;background:rgba(255,215,0,.1)}
+.btn-p{color:#b16aff}.btn-p:hover{box-shadow:4px 4px 0 #b16aff;background:rgba(177,106,255,.1)}
+
+/* ── CARDS ── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:20px 0}
+.rpg-card{background:#050505;border:2px solid #222;padding:18px;position:relative;transition:all .15s}
+.rpg-card:hover{border-color:#ffd700;transform:translate(-2px,-2px);box-shadow:4px 4px 0 rgba(255,215,0,.15)}
+.rpg-card::after{content:'';position:absolute;right:-4px;bottom:-4px;width:100%;height:100%;border:2px solid #111;z-index:-1}
+.card-head{font-family:'Press Start 2P',monospace;font-size:17px;color:#ffd700;margin-bottom:10px;line-height:1.8}
+.card-ico{font-size:26px;display:block;margin-bottom:8px}
+.card-txt{font-size:21px;color:#777;line-height:1.7}
+
+/* ── INTEREST CARDS (disciplines) ── */
+.disc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:20px 0}
+.disc-card{background:#060608;border:2px solid #18101e;padding:16px;position:relative;overflow:hidden;transition:all .15s}
+.disc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,#b16aff);transform:scaleX(0);transform-origin:left;transition:transform .3s}
+.disc-card:hover::before{transform:scaleX(1)}
+.disc-card:hover{border-color:var(--ac,#b16aff);transform:translateY(-3px)}
+.dc-cat{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--ac,#b16aff);margin-bottom:8px;letter-spacing:1px}
+.dc-ico{font-size:26px;margin-bottom:8px;display:block}
+.dc-tit{font-family:'Press Start 2P',monospace;font-size:10px;color:#ccc;margin-bottom:8px;line-height:1.8}
+.dc-txt{font-size:18px;color:#555;line-height:1.6}
+
+/* ── QUEST CAROUSEL ── */
+.quest-carousel-wrap{position:relative;margin:20px 0;overflow:hidden}
+.quest-carousel{display:flex;gap:16px;transition:transform .4s cubic-bezier(.4,0,.2,1);will-change:transform}
+.quest-slide{min-width:280px;max-width:320px;flex-shrink:0}
+.quest-card{background:#000;border:2px solid #ffd700;padding:18px;height:100%;position:relative}
+.quest-card.locked{border-color:#2a2a2a;opacity:.55;pointer-events:none}
+.quest-card.locked::after{content:'🔒 LOCKED';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:21px;color:#333;background:rgba(0,0,0,.6)}
+.quest-card.done{border-color:#00f5e4}
+.qc-status{font-family:'Press Start 2P',monospace;font-size:17px;padding:3px 8px;border:1px solid;display:inline-block;margin-bottom:10px;letter-spacing:.08em}
+.qc-active{color:#4cff82;border-color:#4cff82;background:rgba(76,255,130,.06)}
+.qc-done{color:#00f5e4;border-color:#00f5e4;background:rgba(0,245,228,.06)}
+.qc-locked{color:#333;border-color:#222}
+.qc-name{font-family:'Press Start 2P',monospace;font-size:17px;color:#ddd;line-height:1.8;margin-bottom:8px}
+.qc-desc{font-size:18px;color:#555;line-height:1.6;margin-bottom:10px}
+.qc-xp{font-family:'Press Start 2P',monospace;font-size:21px;color:#ffd700}
+.carousel-controls{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:16px}
+.carousel-btn{font-family:'Press Start 2P',monospace;font-size:17px;background:#000;border:2px solid #ffd700;color:#ffd700;width:36px;height:36px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.carousel-btn:hover{background:#ffd700;color:#000}
+.carousel-btn:disabled{border-color:#333;color:#333;cursor:not-allowed}
+.carousel-dots{display:flex;gap:8px}
+.c-dot{width:8px;height:8px;background:#333;border:1px solid #555;cursor:pointer;transition:background .2s}
+.c-dot.on{background:#ffd700;border-color:#ffd700}
+
+/* ── MEMBER GRID ── */
+.member-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px 0}
+.mem-card{background:#050505;border:2px solid #1a1a1a;padding:22px 16px;text-align:center;transition:all .15s;position:relative;overflow:hidden}
+.mem-card:hover{border-color:var(--mc,#00f5e4);transform:translateY(-3px)}
+.mem-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--mc,#00f5e4);transform:scaleX(0);transition:transform .3s}
+.mem-card:hover::before{transform:scaleX(1)}
+.mem-av{font-size:40px;display:block;margin-bottom:10px}
+.mem-name{font-family:'Press Start 2P',monospace;font-size:17px;color:#ddd;margin-bottom:6px;line-height:1.8}
+.mem-class{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--mc,#00f5e4);letter-spacing:1px;margin-bottom:10px}
+.mem-obs{font-size:18px;color:#555;line-height:1.6}
+
+/* ── FIELDS GRID ── */
+.fields-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0}
+.field-tile{background:#050505;border:2px solid #1a1a1a;padding:14px 10px;text-align:center;transition:all .15s}
+.field-tile:hover{border-color:#00f5e4;background:rgba(0,245,228,.04)}
+.ft-ico{font-size:17px;display:block;margin-bottom:6px}
+.ft-name{font-family:'Press Start 2P',monospace;font-size:17px;color:#00f5e4;line-height:1.8}
+.ft-desc{font-size:21px;color:#444;margin-top:4px}
+
+/* ── SOCIAL ── */
+.soc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+.soc-btn{background:#050505;border:2px solid #222;padding:18px 10px;text-align:center;text-decoration:none;display:block;transition:all .15s}
+.soc-btn:hover{transform:translate(-2px,-2px)}
+.soc-btn.tw:hover{border-color:#1da1f2;box-shadow:4px 4px 0 #1da1f2}
+.soc-btn.gh:hover{border-color:#f0f6fc;box-shadow:4px 4px 0 #f0f6fc}
+.soc-btn.tc:hover{border-color:#9146ff;box-shadow:4px 4px 0 #9146ff}
+.soc-btn.ig:hover{border-color:#e1306c;box-shadow:4px 4px 0 #e1306c}
+.soc-btn.yt:hover{border-color:#ff0000;box-shadow:4px 4px 0 #ff0000}
+.soc-btn.em:hover{border-color:#ffd700;box-shadow:4px 4px 0 #ffd700}
+.soc-ico{width:26px;height:26px;display:block;margin:0 auto 8px}
+.soc-name{font-family:'Press Start 2P',monospace;font-size:17px;color:#555;display:block;line-height:1.8}
+.soc-handle{font-size:21px;color:#333;display:block;margin-top:2px}
+
+/* ── WORLD STRIP ── */
+#world{position:fixed;bottom:0;left:0;right:0;height:150px;z-index:7000;pointer-events:none;overflow:hidden}
+#world canvas{position:absolute;bottom:0;left:0;image-rendering:pixelated;image-rendering:crisp-edges}
+
+/* ── REVEAL ANIMATIONS ── */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .5s,transform .5s}
+.reveal.v{opacity:1;transform:none}
+
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:900px){
+  .fields-grid{grid-template-columns:repeat(3,1fr)}
+  .member-grid{grid-template-columns:repeat(3,1fr)}
+  .soc-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:680px){
+  .hud-nav{display:none}
+  .fields-grid{grid-template-columns:repeat(2,1fr)}
+  .member-grid{grid-template-columns:1fr}
+  .soc-grid{grid-template-columns:repeat(2,1fr)}
+  .card-grid{grid-template-columns:1fr}
+  .disc-grid{grid-template-columns:1fr}
+  .quest-slide{min-width:calc(100vw - 80px)}
+  .zone-content{padding:0 16px}
+  .game-title{font-size:clamp(14px,6vw,24px)}
+  .title-frame{padding:14px 20px}
+  #world{height:120px}
+}
+@media(max-width:400px){
+  .soc-grid{grid-template-columns:repeat(2,1fr)}
+  .fields-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <a href="#z-town" class="hud-logo" style="cursor:pointer;text-decoration:none">T·D·T</a>
+  <div class="hud-zone" id="hz-name">TOWN SQUARE</div>
+  <nav class="hud-nav">
+    <a href="#z-town">🏰</a>
+    <a href="#z-forest">🌲</a>
+    <a href="#z-party">👥</a>
+    <a href="#z-dungeon">🔮</a>
+    <a href="#z-quests">📋</a>
+    <a href="#z-arcade">🎮</a>
+    <a href="#z-tavern">🍺</a>
+  </nav>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ZONE 1 · TOWN SQUARE · /home                 -->
+<!-- ══════════════════════════════════════════════ -->
+<section class="zone" id="z-town" style="background:#0a0a12">
+  <canvas class="tile-bg" id="c-town"></canvas>
+  <div class="zone-content" style="text-align:center;padding-top:40px">
+    <div class="title-frame reveal">
+      <span class="c3"></span><span class="c4"></span>
+      <div class="game-title">T · D · T</div>
+      <div class="game-sub">THE DUMB TALES</div>
+    </div>
+    <div class="dialog reveal" data-npc="★ NARRATOR ★" style="max-width:600px;margin:0 auto 16px">
+      Welcome, traveler, to the world of <span style="color:#ffd700">The Dumb Tales.</span><br>
+      A realm forged by nerds, for nerds. Science. Tech. Games. Anime. Home-labs.<br>
+      stories compiled with bad decisions.<span class="dbc">▮</span>
+    </div>
+    <div class="reveal">
+      <a href="#z-forest" class="btn btn-c">START QUEST</a>
+    </div>
+    
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ZONE 2 · WHISPERING FOREST · /about          -->
+<!-- ══════════════════════════════════════════════ -->
+<section class="zone" id="z-forest" style="background:#060d06">
+  <canvas class="tile-bg" id="c-forest"></canvas>
+  <div class="zone-content">
+    <div class="sec-header reveal">
+      <div class="sec-badge" style="color:#4cff82">🌲 WHISPERING FOREST</div>
+      <div class="sec-title" style="color:#4cff82">ABOUT THE PARTY</div>
+    </div>
+    <div class="dialog reveal" data-npc="🧙 ELDER ALDRIC">
+      These woods hold many truths — some ancient, some half-finished at 2am. The Dumb Tales is a fellowship of curious minds drawn to <span style="color:#4cff82">science, philosophy, literature, technology, and the occasional terrible idea.</span> We wander between disciplines the way others wander between tabs. Lost? Maybe. Interested? Always.<span class="dbc">▮</span>
+    </div>
+    <div class="card-grid reveal">
+      <div class="rpg-card"><span class="card-ico">⚔️</span><div class="card-head">ORIGIN STORY</div><p class="card-txt">A group chat between friends who couldn't stop sharing papers, rabbit holes, anime recs, and half-baked theories at midnight.</p></div>
+      <div class="rpg-card"><span class="card-ico">📚</span><div class="card-head">WHAT WE READ</div><p class="card-txt">Philosophy, literature, self-help that actually helps, science writing, and the occasional manga. Wide net. No apologies.</p></div>
+      <div class="rpg-card" style="grid-column:span 1;justify-self:center;width:100%"><span class="card-ico">🏠</span><div class="card-head">THE LAB</div><p class="card-txt">We self-host everything — NAS, media servers, monitoring dashboards. If we can run it ourselves, we will.</p></div>
+      <div class="rpg-card"><span class="card-ico">🗺️</span><div class="card-head">THE QUEST</div><p class="card-txt">We explore sciences, tech, games, pop culture, open-source. Not experts. Obsessive learners.</p></div>
+      <div class="rpg-card"><span class="card-ico">📜</span><div class="card-head">THE CODE</div><p class="card-txt">Question everything. Build what you can. Document what you make. Host it yourself. Share it all.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ZONE 3 · GUILD HALL · /party                 -->
+<!-- ══════════════════════════════════════════════ -->
+<section class="zone" id="z-party" style="background:#060608">
+  <canvas class="tile-bg" id="c-party"></canvas>
+  <div class="zone-content">
+    <div class="sec-header reveal">
+      <div class="sec-badge" style="color:#00f5e4">👥 THE GUILD HALL</div>
+      <div class="sec-title">MEET THE PARTY</div>
+    </div>
+    <div class="dialog reveal" data-npc="📜 GUILD REGISTER">Three chiefs. Zero wisdom. Infinite confidence.<span class="dbc">▮</span></div>
+    <div class="member-grid reveal">
+      <div class="mem-card" style="--mc:#ffd700">
+        <span class="mem-av">🤝</span>
+        <div class="mem-name">CHIEF<br>"TRUST ME BRO"</div>
+        <div class="mem-class">CHIEF CONFIDENCE OFFICER</div>
+        <div class="mem-obs">Has never been right on the first try. Has also never stopped trying. Peer reviews are a suggestion.</div>
+      </div>
+      <div class="mem-card" style="--mc:#b16aff">
+        <span class="mem-av">🌀</span>
+        <div class="mem-name">CHIEF<br>"CONTROLLED CHAOS"</div>
+        <div class="mem-class">CHIEF ENTROPY OFFICER</div>
+        <div class="mem-obs">Every system works perfectly until it ships. Has 14 tabs open, all load-bearing.</div>
+      </div>
+      <div class="mem-card" style="--mc:#ff4d6d">
+        <span class="mem-av">💥</span>
+        <div class="mem-name">CHIEF<br>"TERRIBLE DECISIONS"</div>
+        <div class="mem-class">CHIEF BAD IDEA OFFICER</div>
+        <div class="mem-obs">Responsible for most of our best stories and all of our worst outages. We keep them around for the content.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ZONE 4 · CRYSTAL DUNGEON · /disciplines      -->
+<!-- ══════════════════════════════════════════════ -->
+<section class="zone" id="z-dungeon" style="background:#080510">
+  <canvas class="tile-bg" id="c-dungeon"></canvas>
+  <div class="zone-content">
+    <div class="sec-header reveal">
+      <div class="sec-badge" style="color:#b16aff">🔮 CRYSTAL DUNGEON</div>
+      <div class="sec-title" style="color:#b16aff">DISCIPLINES WE EXPLORE</div>
+    </div>
+    <div class="dialog reveal" data-npc="💀 DUNGEON KEEPER">Each chamber holds a different obsession. All kept <span style="color:#b16aff">at least one of us awake</span> this week.<span class="dbc">▮</span></div>
+    <div class="disc-grid reveal">
+      <div class="disc-card" style="--ac:#00f5e4"><div class="dc-cat">⚛ PHYSICS</div><span class="dc-ico">🌀</span><div class="dc-tit">QUANTUM MEASUREMENT</div><p class="dc-txt">Why does the universe choose when you look at it?</p></div>
+      <div class="disc-card" style="--ac:#b16aff"><div class="dc-cat">∫ MATHEMATICS</div><span class="dc-ico">∞</span><div class="dc-tit">GÖDEL'S INCOMPLETENESS</div><p class="dc-txt">Math has hard limits. Beautiful and terrifying.</p></div>
+      <div class="disc-card" style="--ac:#ff4d6d"><div class="dc-cat">🔐 CYBER-SECURITY</div><span class="dc-ico">🛡️</span><div class="dc-tit">CTFs & PENTESTING</div><p class="dc-txt">Think like an attacker to build real defenses.</p></div>
+      <div class="disc-card" style="--ac:#f5a623"><div class="dc-cat">💻 CS / AI</div><span class="dc-ico">🤖</span><div class="dc-tit">EMERGENCE IN LLMs</div><p class="dc-txt">Capabilities appear as sudden phase transitions at scale.</p></div>
+      <div class="disc-card" style="--ac:#ff6b6b"><div class="dc-cat">🧠 NEUROSCIENCE</div><span class="dc-ico">👁️</span><div class="dc-tit">THE HARD PROBLEM</div><p class="dc-txt">Why is there something it is like to be you?</p></div>
+      <div class="disc-card" style="--ac:#4cff82"><div class="dc-cat">🎮 VIDEO GAMES</div><span class="dc-ico">🕹️</span><div class="dc-tit">SYSTEMS DESIGN</div><p class="dc-txt">We play everything and can't stop analysing the mechanics.</p></div>
+      <div class="disc-card" style="--ac:#ff6b9d"><div class="dc-cat">🎌 POP CULTURE</div><span class="dc-ico">📺</span><div class="dc-tit">ANIME, MANGA, COMICS</div><p class="dc-txt">Berserk to Chainsaw Man. Strong opinions held loosely.</p></div>
+      <div class="disc-card" style="--ac:#00f5e4"><div class="dc-cat">🏠 HOME LAB</div><span class="dc-ico">🖥️</span><div class="dc-tit">SELF-HOSTING & OPEN SOURCE</div><p class="dc-txt">NAS builds, Proxmox, Pi-holes. Run it ourselves.</p></div>
+      <div class="disc-card" style="--ac:#4fc3f7"><div class="dc-cat">🔭 ASTRONOMY</div><span class="dc-ico">📡</span><div class="dc-tit">THE FERMI PARADOX</div><p class="dc-txt">Where is everyone? Every answer is disturbing.</p></div>
+      <div class="disc-card" style="--ac:#ffd700"><div class="dc-cat">📖 PHILOSOPHY</div><span class="dc-ico">🔬</span><div class="dc-tit">EPISTEMOLOGY & ETHICS</div><p class="dc-txt">How do we know what we know? And should we do it anyway?</p></div>
+      <div class="disc-card" style="--ac:#4cff82"><div class="dc-cat">📚 LITERATURE</div><span class="dc-ico">📕</span><div class="dc-tit">FICTION & NON-FICTION</div><p class="dc-txt">The best ideas arrive dressed as stories.</p></div>
+      <div class="disc-card" style="--ac:#ff6b6b"><div class="dc-cat">🧘 SELF-DEVELOPMENT</div><span class="dc-ico">⚡</span><div class="dc-tit">MENTAL MODELS & HABITS</div><p class="dc-txt">Understanding how we think so we can think better.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ZONE 5 · QUEST BOARD · /quests               -->
+<!-- ══════════════════════════════════════════════ -->
+<section class="zone" id="z-quests" style="background:#0a0804">
+  <canvas class="tile-bg" id="c-quests"></canvas>
+  <div class="zone-content">
+    <div class="sec-header reveal">
+      <div class="sec-badge" style="color:#ffd700">📋 THE QUEST BOARD</div>
+      <div class="sec-title" style="color:#ffd700">ACTIVE MISSIONS</div>
+    </div>
+    <div class="dialog reveal" data-npc="📌 QUEST MASTER">Current missions are underway. Future quests remain sealed until the party is ready.<span class="dbc">▮</span></div>
+    <div class="quest-carousel-wrap reveal">
+      <div class="quest-carousel" id="qcarousel">
+        <!-- ACTIVE -->
+        <div class="quest-slide">
+          <div class="quest-card">
+            <div class="qc-status qc-active">ACTIVE</div>
+            <div class="qc-name">BUILD THE TDT HOME LAB V1</div>
+            <div class="qc-desc">Proxmox, TrueNAS, Nextcloud, Jellyfin, Pi-hole. Documenting every step.</div>
+            <div class="qc-xp">+500 XP</div>
+          </div>
+        </div>
+        <div class="quest-slide">
+          <div class="quest-card">
+            <div class="qc-status qc-active">ACTIVE</div>
+            <div class="qc-name">LAUNCH THE TDT WEBSITE</div>
+            <div class="qc-desc">You are literally watching this quest happen right now.</div>
+            <div class="qc-xp">+750 XP</div>
+          </div>
+        </div>
+        <div class="quest-slide">
+          <div class="quest-card">
+            <div class="qc-status qc-active">ACTIVE</div>
+            <div class="qc-name">CTF SEASON — HACKTHEBOX</div>
+            <div class="qc-desc">Working through Pro Labs. Write-ups coming once complete.</div>
+            <div class="qc-xp">+400 XP</div>
+          </div>
+        </div>
+        <!-- DONE -->
+        <div class="quest-slide">
+          <div class="quest-card done">
+            <div class="qc-status qc-done">DONE</div>
+            <div class="qc-name">FORM THE PARTY</div>
+            <div class="qc-desc">Three nerds made it official. The Dumb Tales was born.</div>
+            <div class="qc-xp">+100 XP</div>
+          </div>
+        </div>
+        <!-- LOCKED -->
+        <div class="quest-slide">
+          <div class="quest-card locked">
+            <div class="qc-status qc-locked">LOCKED</div>
+            <div class="qc-name">RECORD FIRST WALKTHROUGH</div>
+            <div class="qc-desc">Set up a recording rig and publish a game walkthrough.</div>
+            <div class="qc-xp">+300 XP</div>
+          </div>
+        </div>
+        <div class="quest-slide">
+          <div class="quest-card locked">
+            <div class="qc-status qc-locked">LOCKED</div>
+            <div class="qc-name">START THE TDT BLOG</div>
+            <div class="qc-desc">Short posts from members about current obsessions.</div>
+            <div class="qc-xp">+250 XP</div>
+          </div>
+        </div>
+        <div class="quest-slide">
+          <div class="quest-card locked">
+            <div class="qc-status qc-locked">LOCKED</div>
+            <div class="qc-name">NETWORK MONITORING DASHBOARD</div>
+            <div class="qc-desc">Grafana + Prometheus + Loki stack on the home lab.</div>
+            <div class="qc-xp">+350 XP</div>
+          </div>
+        </div>
+      </div>
+      <div class="carousel-controls">
+        <button class="carousel-btn" id="q-prev">◀</button>
+        <div class="carousel-dots" id="q-dots"></div>
+        <button class="carousel-btn" id="q-next">▶</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ZONE 6 · SKY CITADEL · /fields               -->
+<!-- ══════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════ -->
+<!-- ZONE 7 · THE ARCADE · /arcade                -->
+<!-- ══════════════════════════════════════════════ -->
+<section class="zone" id="z-arcade" style="background:#0a0406">
+  <canvas class="tile-bg" id="c-arcade"></canvas>
+  <div class="zone-content" style="text-align:center">
+    <div class="sec-header reveal">
+      <div class="sec-badge" style="color:#ff8c42">🎮 THE ARCADE</div>
+      <div class="sec-title" style="color:#ff8c42">WALKTHROUGHS &amp; BUILDS</div>
+    </div>
+    <div style="border:2px dashed #333;padding:48px 24px;margin:20px 0" class="reveal">
+      <div style="font-size:64px;margin-bottom:16px">🔒</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:12px;color:#555;margin-bottom:12px">AREA LOCKED</div>
+      <div style="font-size:18px;color:#333;max-width:400px;margin:0 auto;line-height:1.7">Coming soon: Game walkthroughs, NAS builds, home-lab guides, CTF write-ups, open-source project docs.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ZONE 8 · THE TAVERN · /social                -->
+<!-- ══════════════════════════════════════════════ -->
+<section class="zone" id="z-tavern" style="background:#080503">
+  <canvas class="tile-bg" id="c-tavern"></canvas>
+  <div class="zone-content" style="text-align:center">
+    <div class="sec-header reveal">
+      <div class="sec-badge" style="color:#f5a623">🍺 THE TAVERN</div>
+      <div class="sec-title" style="color:#f5a623">FIND THE PARTY</div>
+    </div>
+    <div class="soc-grid reveal">
+      <a href="https://twitter.com/thedumbtales" target="_blank" rel="noopener noreferrer" class="soc-btn tw">
+        <svg class="soc-ico" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63z" fill="#1da1f2"/></svg>
+        <span class="soc-name">TWITTER / X</span><span class="soc-handle">@thedumbtales</span>
+      </a>
+      <a href="https://github.com/YOUR_ORG" target="_blank" rel="noopener noreferrer" class="soc-btn gh">
+        <svg class="soc-ico" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z" fill="#f0f6fc"/></svg>
+        <span class="soc-name">GITHUB</span><span class="soc-handle">@YOUR_ORG</span>
+      </a>
+      <a href="https://twitch.tv/thedumbtales" target="_blank" rel="noopener noreferrer" class="soc-btn tc">
+        <svg class="soc-ico" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" fill="#9146ff"/></svg>
+        <span class="soc-name">TWITCH</span><span class="soc-handle">/thedumbtales</span>
+      </a>
+      <a href="https://instagram.com/_thedumbtales_" target="_blank" rel="noopener noreferrer" class="soc-btn ig">
+        <svg class="soc-ico" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919C8.416 2.175 8.796 2.163 12 2.163zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" fill="#e1306c"/></svg>
+        <span class="soc-name">INSTAGRAM</span><span class="soc-handle">_thedumbtales_</span>
+      </a>
+      <a href="https://youtube.com/thedumbtales" target="_blank" rel="noopener noreferrer" class="soc-btn yt">
+        <svg class="soc-ico" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#ff0000"/></svg>
+        <span class="soc-name">YOUTUBE</span><span class="soc-handle">/thedumbtales</span>
+      </a>
+      <a href="mailto:deku@thedumbtales.com" class="soc-btn em">
+        <svg class="soc-ico" viewBox="0 0 24 24" fill="#ffd700"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        <span class="soc-name">EMAIL</span><span class="soc-handle">deku@thedumbtales.com</span>
+      </a>
+    </div>
+    <div style="border-top:2px solid #111;padding-top:20px;margin-top:16px" class="reveal">
+      <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#ffd700;margin-bottom:8px">── T·D·T ──</div>
+      <div style="font-size:15px;color:#333;letter-spacing:2px">© 2024 THE DUMB TALES · STORIES COMPILED WITH BAD DECISIONS</div>
+    </div>
+  </div>
+</section>
+
+<div id="world"><canvas id="wc"></canvas></div>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener("mousemove",function(e){var c=document.getElementById("cursor");c.style.left=e.clientX+"px";c.style.top=e.clientY+"px";});
+
+  var ZONES=[
+    {id:"z-town",hud:"TOWN SQUARE"},{id:"z-forest",hud:"THE FOREST"},
+    {id:"z-party",hud:"GUILD HALL"},{id:"z-dungeon",hud:"DUNGEON"},
+    {id:"z-quests",hud:"QUEST BOARD"},
+    {id:"z-arcade",hud:"ARCADE"},{id:"z-tavern",hud:"THE TAVERN"}
+  ];
+  var curZone="";
+  function detectZone(){
+    var found=ZONES[0];
+    for(var i=0;i<ZONES.length;i++){var el=document.getElementById(ZONES[i].id);if(el&&el.getBoundingClientRect().top<window.innerHeight*0.55)found=ZONES[i];}
+    if(found.id!==curZone){curZone=found.id;document.getElementById("hz-name").textContent=found.hud;}
+  }
+  window.addEventListener("scroll",detectZone,{passive:true});detectZone();
+
+  var ro=new IntersectionObserver(function(entries){entries.forEach(function(e,i){if(e.isIntersecting)setTimeout(function(){e.target.classList.add("v");},i*70);});},{threshold:0.08});
+  document.querySelectorAll(".reveal").forEach(function(el){ro.observe(el);});
+
+  /* ── QUEST CAROUSEL ── */
+  var car=document.getElementById("qcarousel");
+  var slides=car?car.querySelectorAll(".quest-slide"):[];
+  var cur=0;
+  function getVisible(){return window.innerWidth<680?1:window.innerWidth<900?2:3;}
+  function updateCarousel(){
+    var vis=getVisible();
+    var slideW=slides[0]?slides[0].offsetWidth+16:300;
+    car.style.transform="translateX(-"+(cur*slideW)+"px)";
+    document.getElementById("q-prev").disabled=cur===0;
+    document.getElementById("q-next").disabled=cur>=slides.length-vis;
+    document.querySelectorAll(".c-dot").forEach(function(d,i){d.classList.toggle("on",i===cur);});
+  }
+  if(slides.length){
+    var dotsEl=document.getElementById("q-dots");
+    for(var i=0;i<slides.length;i++){var d=document.createElement("div");d.className="c-dot"+(i===0?" on":"");(function(idx){d.addEventListener("click",function(){cur=idx;updateCarousel();});})(i);dotsEl.appendChild(d);}
+    document.getElementById("q-prev").addEventListener("click",function(){if(cur>0){cur--;updateCarousel();}});
+    document.getElementById("q-next").addEventListener("click",function(){var vis=getVisible();if(cur<slides.length-vis){cur++;updateCarousel();}});
+    window.addEventListener("resize",function(){if(cur>slides.length-getVisible())cur=Math.max(0,slides.length-getVisible());updateCarousel();});
+    updateCarousel();
+  }
+
+  /* ── TILE BGS ── */
+  function paintBg(id,fn){var cv=document.getElementById(id);if(!cv)return;var sec=cv.parentElement;cv.width=sec.offsetWidth;cv.height=sec.offsetHeight;fn(cv);}
+  function pTown(cv){var c=cv.getContext("2d");c.fillStyle="#05050f";c.fillRect(0,0,cv.width,cv.height);c.fillStyle="rgba(255,255,255,.5)";for(var i=0;i<80;i++)c.fillRect(Math.random()*cv.width,Math.random()*cv.height*.7,1,1);c.fillStyle="#111118";c.fillRect(0,cv.height-42,cv.width,42);}
+  function pForest(cv){var c=cv.getContext("2d");c.fillStyle="#020802";c.fillRect(0,0,cv.width,cv.height);c.fillStyle="#0e2a08";c.fillRect(0,cv.height-42,cv.width,42);}
+  function pParty(cv){var c=cv.getContext("2d");c.fillStyle="#060608";c.fillRect(0,0,cv.width,cv.height);c.fillStyle="#050510";c.fillRect(0,cv.height-42,cv.width,42);}
+  function pDungeon(cv){var W=cv.width,H=cv.height,c=cv.getContext("2d");c.fillStyle="#04020a";c.fillRect(0,0,W,H);for(var x=0;x<W;x+=32)for(var y=0;y<H;y+=20){c.strokeStyle="rgba(80,40,120,.12)";c.lineWidth=1;c.strokeRect(x,y,31,19);}c.fillStyle="#0c0818";c.fillRect(0,H-42,W,42);}
+  function pQuests(cv){var c=cv.getContext("2d");c.fillStyle="#0a0804";c.fillRect(0,0,cv.width,cv.height);c.fillStyle="#0a0800";c.fillRect(0,cv.height-42,cv.width,42);}
+  function pArcade(cv){var c=cv.getContext("2d");c.fillStyle="#0a0406";c.fillRect(0,0,cv.width,cv.height);c.fillStyle="#0a0400";c.fillRect(0,cv.height-42,cv.width,42);}
+  function pTavern(cv){var c=cv.getContext("2d");c.fillStyle="#0a0500";c.fillRect(0,0,cv.width,cv.height);c.fillStyle="rgba(255,120,0,.05)";c.beginPath();c.arc(cv.width*.5,cv.height*.85,70,0,Math.PI*2);c.fill();c.fillStyle="#120800";c.fillRect(0,cv.height-42,cv.width,42);}
+
+  /* ── WORLD STRIP ── */
+  var WC=document.getElementById("wc"),WX=WC.getContext("2d");
+  var WW=window.innerWidth,WH=150;WC.width=WW;WC.height=WH;
+  var SP=3;
+  var PARTY=[
+    {shirt:"#2244aa",pants:"#1a337a",hair:"#3a2010",offX:0,offY:0},
+    {shirt:"#aa2244",pants:"#882222",hair:"#1a1020",offX:-40,offY:-2},
+    {shirt:"#22aa44",pants:"#1a7a33",hair:"#2a2a10",offX:-76,offY:1}
+  ];
+  function drawChar(ctx,x,y,frame,dir,m){
+    var f=frame%4;ctx.save();
+    if(dir<0){ctx.translate(x+8*SP,y);ctx.scale(-1,1);}else ctx.translate(x,y);
+    function p(r,c,w,h,col){ctx.fillStyle=col;ctx.fillRect(c*SP,r*SP,w*SP,h*SP);}
+    p(0,2,4,1,m.hair);p(1,2,4,1,m.hair);p(2,1,5,3,"#f5c5a3");p(2,2,1,1,"#fff");p(2,4,1,1,"#fff");
+    p(5,1,5,4,m.shirt);var al=f<2?0:1,ar=f<2?1:0;p(5+al,0,1,3,m.shirt);p(5+ar,6,1,3,m.shirt);
+    if(f===0||f===2){p(9,1,2,4,m.pants);p(9,3,2,4,m.pants);p(13,1,2,2,"#3a2808");p(13,3,2,2,"#3a2808");}
+    else if(f===1){p(9,1,2,5,m.pants);p(9,4,2,3,m.pants);p(14,1,2,2,"#3a2808");p(12,4,2,2,"#3a2808");}
+    else{p(9,1,2,3,m.pants);p(9,4,2,5,m.pants);p(12,1,2,2,"#3a2808");p(14,4,2,2,"#3a2808");}
+    ctx.restore();
+  }
+  var BIO={
+    "z-town":{sky:"#08081a",gnd:"#12121f",gT:"#1a1a2f"},
+    "z-forest":{sky:"#020a02",gnd:"#071507",gT:"#0e2a0e"},
+    "z-party":{sky:"#050510",gnd:"#060618",gT:"#0a0a28"},
+    "z-dungeon":{sky:"#04020c",gnd:"#0a0518",gT:"#180830"},
+    "z-quests":{sky:"#0a0804",gnd:"#0f0a04",gT:"#1a1008"},
+    "z-arcade":{sky:"#0a0406",gnd:"#0f0804",gT:"#1a0e08"},
+    "z-tavern":{sky:"#0a0500",gnd:"#150a00",gT:"#2a1400"}
+  };
+  function wx(bx,cam,spd,spr){return((bx-cam*spd)%spr+spr)%spr-60;}
+  function drawBiomeBg(biome,camOff){
+    var t=Date.now()*0.001;
+    if(biome==="z-town"||biome==="z-party"){
+      var blds=[{x:50,w:55,h:50},{x:180,w:40,h:35},{x:320,w:65,h:60},{x:480,w:45,h:42},{x:620,w:70,h:55},{x:780,w:50,h:38}];
+      for(var i=0;i<blds.length;i++){var bx=wx(blds[i].x,camOff,0.3,WW+120);WX.fillStyle="#0c0c1e";WX.fillRect(bx,WH-40-blds[i].h,blds[i].w,blds[i].h);WX.fillStyle="rgba(255,230,80,.35)";for(var wy2=WH-35-blds[i].h;wy2<WH-48;wy2+=10)for(var wwx2=bx+5;wwx2<bx+blds[i].w-5;wwx2+=11)if((wwx2*7+wy2*3)%11<5)WX.fillRect(wwx2,wy2,4,5);}
+      for(var i=0;i<4;i++){var lx=wx(100+i*220,camOff,0.5,WW+200);WX.fillStyle="#333";WX.fillRect(lx,WH-68,2,30);WX.fillStyle="#ffd700";WX.fillRect(lx-4,WH-72,10,6);WX.fillStyle="rgba(255,215,0,.08)";WX.beginPath();WX.arc(lx+1,WH-69,14,0,Math.PI*2);WX.fill();}
+    }
+    else if(biome==="z-forest"){
+      for(var i=0;i<10;i++){var tx=wx(i*110,camOff,0.15,WW+150);WX.fillStyle="#061a06";WX.fillRect(tx-3,WH-75,6,38);WX.fillStyle="#0a2a08";WX.fillRect(tx-14,WH-80,28,20);WX.fillStyle="#0e3a0c";WX.fillRect(tx-9,WH-92,18,16);WX.fillStyle="#124a10";WX.fillRect(tx-5,WH-100,10,12);}
+      for(var i=0;i<6;i++){var tx=wx(60+i*170,camOff,0.4,WW+200);WX.fillStyle="#0d2a06";WX.fillRect(tx-4,WH-68,8,30);WX.fillStyle="#1a4a10";WX.fillRect(tx-18,WH-72,36,24);WX.fillStyle="#226014";WX.fillRect(tx-12,WH-88,24,20);WX.fillStyle="#2a7018";WX.fillRect(tx-6,WH-98,12,14);}
+      for(var i=0;i<8;i++){var fx=wx(i*100,camOff,0.2,WW+100);var fy=WH-55-Math.sin(t*2+i*1.5)*18;WX.fillStyle="rgba(150,255,80,"+(0.3+Math.sin(t*4+i)*0.3)+")";WX.fillRect(fx,fy,2,2);}
+    }
+    else if(biome==="z-dungeon"){
+      for(var i=0;i<6;i++){var px=wx(i*160,camOff,0.25,WW+180);WX.fillStyle="#110820";WX.fillRect(px-6,WH-90,12,54);WX.fillStyle="#1a0c30";WX.fillRect(px-9,WH-90,18,5);WX.fillRect(px-9,WH-40,18,5);}
+      for(var i=0;i<4;i++){var tx=wx(80+i*200,camOff,0.3,WW+200);WX.fillStyle="#444";WX.fillRect(tx,WH-78,3,14);var fl=Math.sin(t*6+i*2)*0.4+0.6;WX.fillStyle="rgba(255,140,0,"+fl+")";WX.fillRect(tx-3,WH-86,9,10);WX.fillStyle="rgba(255,200,0,"+(fl*0.6)+")";WX.fillRect(tx-2,WH-90,7,6);WX.fillStyle="rgba(255,120,0,0.06)";WX.beginPath();WX.arc(tx+1,WH-82,18,0,Math.PI*2);WX.fill();}
+      for(var i=0;i<8;i++){var cx=wx(i*110,camOff,0.35,WW+150);WX.fillStyle="rgba(160,80,255,.2)";WX.beginPath();WX.moveTo(cx,WH-50);WX.lineTo(cx-4,WH-40);WX.lineTo(cx+4,WH-40);WX.closePath();WX.fill();}
+    }
+    else if(biome==="z-quests"){
+      for(var i=0;i<5;i++){var px=wx(i*190,camOff,0.3,WW+180);WX.fillStyle="#2a1500";WX.fillRect(px,WH-80,4,44);WX.fillStyle="#3a2000";WX.fillRect(px-14,WH-78,32,14);WX.fillStyle="#4a2a08";WX.fillRect(px-12,WH-76,28,10);}
+      for(var i=0;i<4;i++){var bx=wx(80+i*240,camOff,0.4,WW+200);WX.fillStyle="#2a1500";WX.fillRect(bx-8,WH-56,16,18);WX.strokeStyle="#4a2800";WX.lineWidth=1;WX.strokeRect(bx-8,WH-56,16,18);}
+    }
+    else if(biome==="z-arcade"){
+      for(var i=0;i<4;i++){var ax=wx(i*210,camOff,0.3,WW+200);WX.fillStyle="#1a0808";WX.fillRect(ax-10,WH-75,20,38);WX.fillStyle="#0a0404";WX.fillRect(ax-8,WH-73,16,12);var gc=["#ff4444","#44ff44","#4444ff","#ffff44"];WX.fillStyle=gc[i%4];WX.globalAlpha=0.3+Math.sin(t*3+i)*0.15;WX.fillRect(ax-6,WH-71,12,8);WX.globalAlpha=1;}
+    }
+    else if(biome==="z-tavern"){
+      for(var i=0;i<5;i++){var bx=wx(i*180,camOff,0.25,WW+180);WX.fillStyle="#2a1500";WX.fillRect(bx-9,WH-58,18,20);WX.strokeStyle="#4a2800";WX.lineWidth=1;WX.strokeRect(bx-9,WH-58,18,20);}
+      for(var i=0;i<3;i++){var lx=wx(80+i*280,camOff,0.15,WW+250);WX.fillStyle="#2a1500";WX.fillRect(lx,WH*0.08,2,WH*0.2);WX.fillStyle="#553300";WX.fillRect(lx-5,WH*0.28,12,12);var fl2=Math.sin(t*3+i*2)*0.3+0.6;WX.fillStyle="rgba(255,"+(160+Math.floor(fl2*40))+","+(40+Math.floor(fl2*40))+","+(0.5+fl2*0.2)+")";WX.fillRect(lx-3,WH*0.3,8,8);WX.fillStyle="rgba(255,140,0,0.05)";WX.beginPath();WX.arc(lx+1,WH*0.33,22,0,Math.PI*2);WX.fill();}
+      WX.fillStyle="rgba(255,100,20,.06)";WX.beginPath();WX.arc(WW*0.5,WH-30,60,0,Math.PI*2);WX.fill();
+    }
+  }
+
+  var sprFrame=0,sprTick=0,lastDir=1,lastScrollY=0;
+  function loop(){
+    var biome="z-town";
+    for(var i=0;i<ZONES.length;i++){var el=document.getElementById(ZONES[i].id);if(el&&el.getBoundingClientRect().top<window.innerHeight*0.6)biome=ZONES[i].id;}
+    var scrollMax=document.documentElement.scrollHeight-window.innerHeight;
+    var scrollPct=scrollMax>0?window.scrollY/scrollMax:0;
+    var leadX=WW*0.1+scrollPct*(WW*0.85-WW*0.1);
+    var camOff=scrollPct*WW*3;
+    var delta=window.scrollY-lastScrollY;
+    var moving=Math.abs(delta)>1;
+    if(moving){lastDir=delta>0?1:-1;sprTick++;if(sprTick%6===0)sprFrame++;}
+    lastScrollY=window.scrollY;
+    var B=BIO[biome]||BIO["z-town"];
+    WX.clearRect(0,0,WW,WH);WX.fillStyle=B.sky;WX.fillRect(0,0,WW,WH);
+    drawBiomeBg(biome,camOff);
+    WX.fillStyle=B.gT;WX.fillRect(0,WH-40,WW,8);WX.fillStyle=B.gnd;WX.fillRect(0,WH-32,WW,32);
+    WX.fillStyle="rgba(255,255,255,.03)";for(var i=0;i<WW;i+=18)if(i%54===0)WX.fillRect(i,WH-40,3,2);
+    var drawDir=moving?lastDir:0;
+    for(var p=PARTY.length-1;p>=0;p--){
+      var m=PARTY[p],mx=leadX+m.offX,my=WH-16*SP-40+m.offY;
+      WX.fillStyle="rgba(0,0,0,.25)";WX.beginPath();WX.ellipse(mx+12,WH-42+m.offY,12,3,0,0,Math.PI*2);WX.fill();
+      drawChar(WX,mx,my,moving?(sprFrame+p*2):0,drawDir||1,m);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  var SIDS=ZONES.map(function(z){return z.id;});
+  document.addEventListener("keydown",function(e){
+    if(e.key==="ArrowDown"){e.preventDefault();var ci=-1;for(var i=0;i<SIDS.length;i++){var el=document.getElementById(SIDS[i]);if(el&&el.getBoundingClientRect().top>-10&&el.getBoundingClientRect().top<window.innerHeight*0.5){ci=i;break;}}document.getElementById(SIDS[Math.min((ci<0?0:ci)+1,SIDS.length-1)]).scrollIntoView({behavior:"smooth"});}
+    if(e.key==="ArrowUp"){e.preventDefault();var ci=0;for(var i=SIDS.length-1;i>=0;i--){var el=document.getElementById(SIDS[i]);if(el&&el.getBoundingClientRect().top<window.innerHeight*0.4){ci=i;break;}}document.getElementById(SIDS[Math.max(ci-1,0)]).scrollIntoView({behavior:"smooth"});}
+  });
+
+  window.addEventListener("load",function(){
+    paintBg("c-town",pTown);paintBg("c-forest",pForest);paintBg("c-party",pParty);
+    paintBg("c-dungeon",pDungeon);paintBg("c-quests",pQuests);
+    paintBg("c-arcade",pArcade);paintBg("c-tavern",pTavern);
+    loop();
+    window.addEventListener("resize",function(){WW=window.innerWidth;WC.width=WW;WC.height=WH;updateCarousel();});
+  });
+})();
+</script>
+</body>
+</html>
